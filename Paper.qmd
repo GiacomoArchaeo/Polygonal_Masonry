@@ -1,0 +1,1309 @@
+---
+title: "A new method for the energetics analysis of polygonal masonry in Samnite hillforts (Italy)"
+author: "Giacomo Fontana and Seth Bernard"
+abstract: "This article presents a statistically grounded method for the comparative analysis of polygonal masonry and the calculation of their architectural energetics. Four wall stretches of different Samnite hillforts (5th-3rd century BCE) have been recorded through 3D modelling to generate models suitable for calculating three variables (area, rectangularity and gap area) used for a comparative assessment of the different building techniques involved in their construction. This allowed the identification of masonry styles related to different costs of labor which were used to produce cross-regional energetic indexes suitable for the cost analysis of several hundred hillforts in south-central Italy. This formal and replicable approach to the cost analysis of polygonal masonry is not only suitable for analysing sites in Italy, but can also be applied to similar sites found widely in the Mediterranean."
+keywords: "Hillforts, Polygonal masonry, Architectural energetics, Monumental architecture, Iron Age, Hellenistic period, Italy" 
+colorlinks: true 
+number-sections: true
+code-line-numbers: true
+fig-dpi: 600
+execute:
+  cap-location: bottom
+  warning: false
+df-print: kable
+always_allow_html: true
+format:
+  #html: 
+    #code-fold: true
+  #pdf:
+    #echo: false
+    #cap-location: bottom
+    #df-print: kable
+  docx:
+    echo: false
+    df-print: kable
+---
+
+**Affiliation:** GF, University College London; SB: University of Toronto
+
+**Corresponding author:** Giacomo Fontana email: giacomo.fontana.19\@ucl.ac.uk address: Institute of Archaeology, University College London, 31-34 Gordon Square, London WC1H0PY, United Kingdom.
+
+**Keywords:** Hillforts, Polygonal masonry, Architectural energetics, Monumental architecture, Hellenistic period, Samnites, Roman archaeology.
+
+**Highlights:**
+
+-   First method for statically grounded cross-regional comparison of polygonal masonry.
+
+-   Identification of different masonry styles within single wall stretches.
+
+-   Statistically derived calculation of architectural energetic of Italian polygonal masonry.
+
+-   Transferable method for the analysis of other polygonal walls in the Mediterranean and beyond.
+
+-   Full code and article are written in Quarto and available online.
+
+**Data and code:** Data and code are available at https://doi.org/10.5281/zenodo.7555248
+
+**Color should be used for figure 2 and for figures 9 to 13**
+
+```{r}
+#| label: load-packages
+#| output: false
+library(knitr)
+library(tidyverse)  # data manipulation
+library(sf) # geometries
+library(units) # dropping geometry
+library(shotGroups) # minimum bounding box
+library(cluster)    # clustering algorithms
+library(factoextra) # for visualizing cluster results
+library(ggplot2) # plots
+library(ggpubr) # plots
+library(compareGroups) # plots
+library(ggspatial) # scale bar maps
+library(ggsci) # palette
+library(kableExtra) # tables
+library(scales)
+library(ggstatsplot)
+library(statsExpressions)
+
+# wall plottings
+mytheme <- theme(line = element_blank(), 
+                 panel.grid.major = element_blank(), 
+                 panel.grid.minor = element_blank(), 
+                 panel.background = element_blank(), 
+                 axis.text.x = element_blank(),
+                 axis.text.y = element_blank(),
+                 axis.title.x = element_blank(),
+                 axis.title.y = element_blank(),
+                 plot.title = element_text(size = 8),
+                 legend.key.height = unit(0.2, 'cm'),
+                 legend.key.width = unit(0.5, 'cm'),
+                 legend.title = element_text(size=6),
+                 legend.text = element_text(size = 6),
+                 legend.position="bottom", 
+                 legend.box = "horizontal",
+                 plot.margin = margin(t = 0,  # Top margin
+                             r = 0,  # Right margin
+                             b = 0,  # Bottom margin
+                             l = 0)) # Left margin)
+
+myscale <- annotation_scale(aes(width_hint=0.1, style="ticks", location='br'), 
+                            line_width=0.5,
+                            height=unit(0.15, "cm"),
+                            pad_y=unit(0.3, "cm"),
+                            pad_x=unit(0.7, "cm"),
+                            text_cex = 0.5)
+```
+
+# Introduction
+
+Architectural energetics forms an increasingly prominent means of understanding the role and impact of architectural production in early societies (Abrams 1994; DeLaine 1997; De Haan 2010; Pakkanen 2013; Devolder 2013; Murakami 2015; Pickett et al. 2016; Brysbaert et al. 2018; Turner 2018; McCurdy and Abrams 2019; Boswinkel 2021; Xie et al. 2021; Barker et al. 2022). The methodology analyses building as an investment of energy (Abrams 1989; Trigger 1990; Abrams and Bolland 1999) by producing quantitative models of a given monument's cost in person-hours of labour. Such models facilitate the integration of architecture and its remains into a range of historical discussions, from socioeconomic impacts to labour organisation and political power.
+
+To date, the study of architectural energetics in Italy focuses almost exclusively on serial or modular building techniques perceived of as suﬀiciently regular to support quantitative analysis. This has entailed a strong focus on Roman architecture of the Late Republic and Imperial periods built of brick-faced concrete or squared stone blocks (DeLaine 1997; Maschek 2016; Brogiolo, Camporeale, Chavarría Arnau 2017; Courault, Marquez 2020). Substantial and extensive remains of Iron Age through Hellenistic (8th to 3rd centuries BCE) architecture in Italy are largely neglected by this literature. These earlier structures are often characterised by their use of irregularly shaped, dry-set stone blocks. This technique is conventionally referred to in classical archaeology as polygonal masonry (e.g. Scranton 1941, 23-24; Lugli 1957). Polygonal masonry typifies monumental construction of many pre- or non-Roman societies in Italy, while similar masonry is common in other Mediterranean regions.
+
+A robust approach to the energetics of polygonal masonry is critical to a complete understanding of the historical impact of building in Italy. Digital approaches help overcome the issue of irregularity in build technique. Recent work on energetics in the Mediterranean, particularly the Aegean, makes increasing use of digital recording and computational tools (Pakkanen et al. 2020), but similar methods have yet to be applied to Italian architecture. The present paper develops a statistical method for calculating labour costs of four hilltop sites from Pre-Roman Samnium (South-Central Italy). In particular, we develop both a manner for detailed measurement of the irregular facade of blocks and a statistical model of harder-to-measure block depth, which we combine to estimate production rates. We employ data from the Ancient Hillforts Survey (AHS), an ongoing project aimed to detect and map these sites and understand their social and economic contexts through a quantitative computational approach and site-based recording campaigns. The first phase of this project developed a large-scale lidar-based study of Samnium that detected more than 300 suspected hillfort sites (Fontana 2022). Around 100 were ground-truthed in the field, together with approximately 50 previously known sites. This undertaking allowed the validation of the interpretation of the sites, their mapping, and the collection of data on construction techniques, pottery assemblages and chronology. Several 3D models of wall scratches were also produced, of which four were used to develop the methodology presented below.
+
+The methodology developed in this paper intends to address two aims. First, we develop a model for the cost analysis of the stonemasonry typical of several hundred Hellenistic hilltop fortresses in Samnium. Second, we provide a formal and replicable approach to the cost analysis of polygonal masonry not only typical of these fortresses, but found widely in Italy and across the Mediterranean. The Quarto project with the R scripts and data for replicating our method and generating all the analyses and figures are available as a dedicated repository (https://doi.org/10.5281/zenodo.7555248)
+
+```{r}
+#| label: load-data
+#| output: false
+
+wall <- st_read("data/vector/wall.shp") %>%
+  rename(Site = Site_ID) %>% 
+  mutate(ID = row_number())
+wallgap <- st_read("data/vector/wall_gap.shp") %>%
+  rename(Site = Site_ID)
+wallfilled <- st_read("data/vector/wall_filled.shp") %>%
+  rename(Site = Site_ID)
+```
+
+## Background
+
+The case studies presented here pertain to the Samnite culture of upland South-Central Italy (Tagliamonte 1996; Scopacasa 2015). The Samnites are not the only people to build hillforts sites of polygonal masonry in Italy (e.g. De Gennaro 2005; Nicosia, Bettini 2009; Attenni, Baldassare 2012; Cambi et al. 2013; Attenni 2015; Attenni 2019). However, the Samnites' mode of hilltop settlement was noticed by ancient sources and attracts significant modern attention (Oakley 1995; Stek 2018). Roman authors writing after the conquest of Samnium characterised the uplands people as inferior or less civilised by comparison to Rome. A large part of this view is derived from the absence of cities, seen by Romans as key elements of complex society (Woolf 2020). Energy investment can play a role in this discourse by providing a measure of labour organisation and political structure freed from the urban-centric view.
+
+The most influential attempt to submit polygonal masonry to formal analysis appears in Giuseppe Lugli's monumental study of Italian building technology (1957). Lugli identifies four styles (maniere) of polygonal masonry based upon the appearance of their facades (@fig-Lugli). He posits an evolutionary schema with polygonal masonry developing over time from rougher to more finished or "refined" appearance. Stratigraphic excavation proves his chronological progression wrong (Gatti, Palombi 2016), while assigning walls to Lugli's typology is often a highly subjective procedure, and in some cases single structures show multiple styles. We can retain value to Lugli's schema by interpreting it as essentially a reflection of different levels of energy investment. Rougher or more tightly joined blocks, or larger or smaller units of stone, may be seen to reflect different investments of labour. In following, we suggest these differences may be analysed as discrete and objective quantitative variables.
+
+![The four masonry styles (maniere) identified by Lugli.](images/Lugli.png){#fig-Lugli}
+
+Any systematic analysis of polygonal masonry depends on interpreting variability of walls from site to site. With over 300 new hillforts identified by the AHS alone (Fontana 2022), there are a prohibitively large number of sites to consider. The situation calls for statistical modelling, and as proof of concept, we present a selection of four archaeological sites. Wall sections are chosen from different sites to assess intersite variability in order to create a systematic index of linear costs for fortification in person-hours (ph) that may be transferred to the analysis of other sites.
+
+Two hillforts were chosen from Campania: Monte Cila (K73) and Monte Santa Croce di Piana di Monte Verna (K105). The first is a very large site (122 ha) with an impressive 5 km fortification structured in multiple circuits. The site is often considered a key centre in the Samnite territorial organisation of the region (Oakley 1995, 49-51). The second site is much smaller (17 ha) and forms one of dozens of medium-sized hillforts in Samnium that likely supported a degree of permanent occupation and agricultural activity (Renda 2018). The other hillforts are across the Apennines in the region of Molise. The third site is Monte Saraceno di Cercemaggiore (K110), a medium-sized site (24 ha) but one of the largest in that area of Samnium (Oakley 1995, 125-126). The fourth is Montefalcone (K35), a small site (4 ha) located on a steep mountain ridge overlooking the Adriatic Sea (Oakley 1995, 96-97). The AHS has extensively remapped site K35, identifying an entirely new complex interpreted as the site core. This new complex encloses the summit of Colle Second Croce with two circuits and extends west up to connect with the stretch of fortifications previously known. The new mapping triple the site size, enclosing areas much more likely to have seen some form of inhabitation than previously thought. Interestingly, the fortifications of the new complex are today almost invisible on the ground and were detected mainly thanks to lidar-led ground-truthing (see Fontana 2022 for an explanation of the methodology developed) (@fig-sites).
+
+![Plans of the four sites analysed with indicated the recorded wall stretches.](images/sites.png){#fig-sites}
+
+# Methods and results
+
+## Recording and formal comparison of wall façades
+
+A wall section for each hillfort was recorded by drone and ground-based photogrammetry, using the drone position system to georeference the final model (@fig-walls). This recording method has proven effective for the purposes of energetics calculation (Pakkanen et al. 2020). Orthorectified elevations and plan views of the 3D models were then exported and digitalised. Using these images, each block was drawn as a separate feature in the model. The footprint of resulting blocks was used to generate a filled and gap model of each prospect (@fig-models). Stone depth was recorded only for blocks where measurements were possible from the 3D model, normally the upper parts of walls not covered by vegetation or ground level. No depth recordings were possible for site K73 due to thick vegetation covering the upper parts of its fortifications. As visible in figure 3, the walls of all four sites are characterised by large areas of collapse with structures preserved to different heights ranging from a single block to over 5 m.
+
+```{r}
+#| label: fig-walls
+#| fig-cap: Image of the four stretches of polygonal wall drawn after the 3D models taken in the field.
+#| fig-width: 7
+#| fig.height: 3
+
+fig.walls <- ggplot(wall) + 
+  geom_sf(size = 0.1) + 
+  mytheme +
+  myscale +
+  annotate("text", x = 0.7, y = 36, size=2.5, label = "K73") +
+  annotate("text", x = 1.2, y = 24, size=2.5, label = "K105") +
+  annotate("text", x = 0.7, y = 14, size=2.5, label = "K35") +
+  annotate("text", x = 1.2, y = 4, size=2.5, label = "K110")
+
+fig.walls
+
+ggsave("fig.walls.png", path="images", width = 7, height = 3, units = "in", dpi=600)
+```
+
+```{r}
+#| label: fig-models
+#| fig-cap: Example of the three models used in the analysis for each recorded wall stretch.
+#| fig-width: 7
+#| fig.height: 2.6
+
+example <- "K73"
+
+a <- ggplot(data = (subset(wall, wall$Site == example))) + 
+  geom_sf(size = 0.1) + 
+  mytheme +
+  ggtitle(paste(example, "model"))
+
+b <- ggplot(data = (subset(wallfilled, wallfilled$Site == example))) + 
+  geom_sf(size = 0.1) + 
+  mytheme +
+  ggtitle(paste(example, "filled model"))
+
+c <- ggplot(data = (subset(wallgap, wallgap$Site == example))) + 
+  geom_sf(size = 0.1) + 
+  mytheme +
+  ggtitle(paste(example, "gap model")) +
+  annotation_scale(aes(width_hint=0.11, style="ticks", location='bl'), 
+                            line_width=0.5,
+                            height=unit(0.15, "cm"),
+                            pad_y=unit(0, "cm"),
+                            pad_x=unit(0, "cm"),
+                            text_cex = 0.5)
+
+fig.models <- ggarrange(a, b, c, nrow = 3, align = "v")
+fig.models
+
+ggsave("fig.models.png", path="images", width = 7, height = 2.6, units = "in", dpi=600)
+```
+
+Lugli's characterisation of the four Italic polygonal masonry styles is based on stones size, shape, and the surface finish of assembled blocks (Lugli 1957, 51-165). His four styles are arranged according to a progression from large, roughly shaped, or unshaped blocks to smaller, quasi-rectangular blocks. The size of gaps between blocks feeds into the identification of the four styles, with first style masonry displaying the largest gaps between blocks, while the fourth style displaying closely fit masonry. The change implies progressively higher labour inputs for shaping blocks to fit against others, with the first style involving less processing and the others involving increasing greater care to create a seemingly uninterrupted wall surface of irregularly sized but closely joined blocks.
+
+These observations can be converted into three measurable variables. Single blocks are analysed according to 1) façade area, 2) rectangularity index and 3) gap area around the block. The first variable is simply a measurement of the area of each block's visible façade (@fig-area). Rectangularity is an index measuring the degree to which a shape resembles a rectangle. It is calculated by fitting an oriented minimum bounding box to the block. This bounding box's area is then calculated and divided by the original shape's area. The resulting variable produces an index ranging from 1 to 0 where 1 is a perfect rectangle and lower figures indicate increasing irregularity (@fig-extremes and @fig-rectangularity). The third variable, gap area, considers the spacing between the stones. It is obtained by calculating the empty area surrounding those stone blocks set in between other blocks. Excluding the perimetral blocks prevent the introduction of bias in the analyses related to the preservation of the observable wall curtains (@fig-gap).
+
+```{r}
+#| label: Variable area calculation
+#| output: false
+
+wall$Area <- st_area(wall)
+wall <- drop_units(wall)
+```
+
+```{r}
+#| label: fig-area
+#| fig-cap: Plotting of the variable stone Area on the wall stretches.
+#| fig-width: 7
+#| fig.height: 3
+
+x <- wall$Area
+ls_val <- c(min(x), max(x))
+myfill <- scale_fill_gradient(limits = c(min(x),max(x)), low = "gray80", high = "black", 
+                              na.value = "white", breaks = ls_val, 
+                              labels=c(round(min(x), digits=2),
+                                       round(max(x), digits=2)))
+
+fig.area <- ggplot(wall, aes(fill = Area)) + 
+  geom_sf(size = 0.06) + 
+  mytheme +
+  myscale +
+  myfill +
+  guides(fill = guide_colourbar(barwidth = 0.5, barheight = 2, label.position = "left"), ticks = "none") +
+  theme(legend.position = c(0.935, 0.25)) +
+  annotate("text", x = 0.7, y = 36, size=2.5, label = "K73") +
+  annotate("text", x = 1.2, y = 24, size=2.5, label = "K105") +
+  annotate("text", x = 0.7, y = 14, size=2.5, label = "K35") +
+  annotate("text", x = 1.2, y = 4, size=2.5, label = "K110")
+
+fig.area
+
+ggsave("fig.area.png", path="images", width = 7, height = 3, units = "in", dpi=600)
+```
+
+```{r}
+#| label: Variable rectangularity calculation
+#| output: false
+#| cache: true
+
+# Add columns mbb_Area and index
+wall["mbb_Area"] <- NA
+wall["Rectangularity"] <- NA
+
+for(i in 1:nrow(wall)) {
+  # Extract geometry of a single feature as matrix. Check structure because sometimes it creates the column geometry as a list within a list and others as single list. In the latter case, use: mat <- wall[i, ][[4]][[1]][[1]]
+  mat <- wall[i, ][[3]][[1]][[1]][[1]]
+  # calculate oriented minimum bounding box
+  mbb <- getMinBBox(mat)
+  # Area 
+  wall[i,]$mbb_Area <- mbb$width*mbb$height
+  # calculation of the index as As ÷ AR, where As is the Area of a shape, and AR is the Area of the minimum bounding rectangle.
+  wall[i,]$Rectangularity <- wall[i,]$Area/wall[i,]$mbb_Area
+}
+```
+
+```{r}
+#| label: fig-extremes
+#| fig-cap: Stone blocks with the worst and best rectangularity fit.
+#| fig-width: 5
+#| fig.height: 3
+
+# Worst fit
+n <- which.min(wall$Rectangularity)
+## Extract geometry of a single feature as matrix (see above if there is an error)
+mat <- wall[n,][[3]][[1]][[1]][[1]]
+## calculate oriented minimum bounding box
+mbb <- getMinBBox(mat)
+## plot
+a <- ggplot(data = wall[n,]) + 
+  geom_sf() +
+  geom_point(data=(as.data.frame(mat)), aes(x = V1, y = V2), size=0.6) +
+  geom_polygon(data=as.data.frame(mbb$pts), aes(x = V1, y = V2), color="black", size=0.8, fill="transparent") +
+  mytheme +
+  labs(caption = c(paste("Worst rectangularity fit =", round(wall[n,]$Rectangularity, digits = 2))))
+
+# Best fit
+n <- which.max(wall$Rectangularity)
+## Extract geometry of a single feature as matrix (see above if there is an error)
+mat <- wall[n,][[3]][[1]][[1]][[1]]
+## calculate oriented minimum bounding box
+mbb <- getMinBBox(mat)
+## plot
+b <- ggplot(data = wall[n,]) + 
+  geom_sf() +
+  geom_point(data=(as.data.frame(mat)), aes(x = V1, y = V2), size=0.6) +
+  geom_polygon(data=as.data.frame(mbb$pts), aes(x = V1, y = V2), color="black", size=0.8, fill="transparent") +
+  mytheme +
+  labs(caption = c(paste("Best rectangularity fit =", round(wall[n,]$Rectangularity, digits = 2))))
+
+fig.extremes <- ggarrange(a, b, ncol = 2, align = "hv") +
+  theme(plot.margin = unit(c(1.5,1.5,1.5,1.5),"cm"))
+
+fig.extremes
+
+ggsave("fig.extremes.png", path="images", width = 5, height = 3, units = "in", dpi=600)
+```
+
+```{r}
+#| label: fig-rectangularity
+#| fig-cap: Plotting of the variable stone rectangularity on the wall stretches.
+#| fig-width: 7
+#| fig.height: 3
+
+x <- wall$Rectangularity
+ls_val <- c(min(x), max(x))
+myfill <- scale_fill_gradient(limits = c(min(x),max(x)), low = "gray90", high = "gray20", 
+                              na.value = "white", breaks = ls_val, 
+                              labels=c(round(min(x), digits=2),
+                                       round(max(x), digits=2)))
+
+fig.rectangularity <- ggplot(wall, aes(fill = Rectangularity)) + 
+  geom_sf(size = 0.06) + 
+  mytheme +
+  myscale +
+  myfill +
+  guides(fill = guide_colourbar(barwidth = 0.5, barheight = 2, label.position = "left"), ticks = "none") +
+  theme(legend.position = c(0.935, 0.25)) +
+  annotate("text", x = 0.7, y = 36, size=2.5, label = "K73") +
+  annotate("text", x = 1.2, y = 24, size=2.5, label = "K105") +
+  annotate("text", x = 0.7, y = 14, size=2.5, label = "K35") +
+  annotate("text", x = 1.2, y = 4, size=2.5, label = "K110")
+
+fig.rectangularity
+
+ggsave("fig.rectangularity.png", path="images", width = 7, height = 4, units = "in", dpi=600)
+```
+
+```{r}
+#| label: Variable gap calculation
+#| output: false
+#| cache: true
+
+# create tmp data frame
+tmp <- wall 
+
+# buffer
+tmp$buffer <- st_buffer(wall, dist = 0.01)
+
+# select only blocks which are not at the edge (using previous buffer)
+tmp$covered <- st_covered_by(tmp$buffer, wallfilled) %>% lengths > 0
+tmp <- subset(tmp, tmp$covered[{TRUE}])
+
+# Add column Gap
+tmp["Gap"] <- NA
+
+for(i in 1:nrow(tmp)) {
+  # Identifies touching gaps and extract them
+  tmp1 <- st_touches(tmp, wallgap)[[i]]
+  tmp2 <- st_sf(wallgap$geometry[tmp1])
+  # calculate gap area
+  tmp2$area <- st_area(tmp2)
+  tmp[i,]$Gap <- sum(tmp2$area)
+}
+
+# join gap area to data frame
+wall <- left_join(wall, st_drop_geometry(tmp) %>% 
+  dplyr::select(ID, Gap), by = "ID")
+```
+
+```{r}
+#| label: fig-gap
+#| fig-cap: Plotting of the variable stone gap on the wall stretches.
+#| fig-width: 7
+#| fig.height: 3
+
+x <- subset(wall, !is.na(Gap))$Gap
+ls_val <- c(min(x), max(x))
+myfill <- scale_fill_gradient(limits = c(min(x),max(x)), low = "gray90", high = "gray20", 
+                              na.value = "white", breaks = ls_val, 
+                              labels=c(round(min(x), digits=2),
+                                       round(max(x), digits=2)))
+  
+fig.gap <- ggplot(wall, aes(fill = Gap)) + 
+  geom_sf(size = 0.06) + 
+  mytheme +
+  myscale +
+  myfill +
+  guides(fill = guide_colourbar(barwidth = 0.5, barheight = 2, label.position = "left"), ticks = "none") +
+  theme(legend.position = c(0.935, 0.25)) +
+  annotate("text", x = 0.7, y = 36, size=2.5, label = "K73") +
+  annotate("text", x = 1.2, y = 24, size=2.5, label = "K105") +
+  annotate("text", x = 0.7, y = 14, size=2.5, label = "K35") +
+  annotate("text", x = 1.2, y = 4, size=2.5, label = "K110")
+
+fig.gap
+
+ggsave("fig.gap.png", path="images", width = 7, height = 3, units = "in", dpi=600)
+```
+
+Once measured, the three variables can inform energetics modelling, while they also permit both inter- and intrasite comparison of differences of masonry technique. For future work, these calculations might also inform considerations of phasing or work-teams operating at individual sites or across networks of sites employing polygonal masonry.
+
+### Wall façades statistical comparison
+
+We assessed variations in masonry style across different sites by testing statistically significant differences in the distribution of the three variables (facade area, rectangularity, gap area). The procedure involves first checking for normality in the distribution of variables and then for homogeneity of variance between sites. Results help select the method for site to site comparison, as statistically significant differences, once identified, can be further analysed through pairwise comparison.
+
+A Shapiro-Wilk test was used to test for normality in the distribution of variables across the three sites. As expected by observing the general distribution of the three variables (@fig-variablesDistribution), the data were not normally distributed with the exception of rectangularity at sites K73 and K110 (@tbl-normalDistribution). This result led to the choice to use a Fligner-Killeen test for homogeneity of variance across the different sites, which was confirmed for rectangularity and gap variables (@tbl-homogeneity). Once it was verified that the sites followed a non-parametric distribution, a Kruskal-Wallis test was used for cross-site comparison and, in the eventuality of statistically significant differences, a Dunn's pairwise comparison to highlight which specific variables were significant from others. The large sample size (n=2038) would allow the use of a parametric test like ANOVA; however, a non-parametric test such as Kruskal-Wallis was deemed more appropriate for the structure of the data. Results of the Kruskal-Wallis test indicate statistically significant differences in the distribution of variables across the sites (@fig-statistics). The results of the Dunn pairwise comparison emphasises the significant difference of the masonry of site K73 from that found at other sites. This conclusion offers a statistically grounded basis for the sensibly different style of masonry found on the site from the others studied here. For this reason, the masonry of K73 was treated separately in subsequent energetics calculations. The analyses also show a minor difference between the masonry of K105 and the other sites regarding the facade area, and gap area with K35. In contrast, rectangularity does not differ sensibly.
+
+```{r}
+#| label: General statistics
+#| output: false
+
+# Total statistics
+wallstats <- wall
+wallstats$Site <- "Total sample"
+wallstats <- group_by(st_drop_geometry(wallstats), Site) %>%
+  summarise(
+    count = n(),
+    "Area_mean" = mean(Area, na.rm = TRUE),
+    "Area_sd" = sd(Area, na.rm = TRUE),
+    "Area_IQR" = IQR(Area, na.rm = TRUE),
+    "Rectangularity_mean" = mean(Rectangularity, na.rm = TRUE),
+    "Rectangularity_sd" = sd(Rectangularity, na.rm = TRUE),
+    "Rectangularity_IQR" = IQR(Rectangularity, na.rm = TRUE),
+    "Gap_mean" = mean(Gap, na.rm = TRUE),
+    "Gap_sd" = sd(Gap, na.rm = TRUE),
+    "Gap_IQR" = IQR(Gap, na.rm = TRUE),
+    "Depth_mean" = mean(Depth, na.rm = TRUE),
+    "Depth_sd" = sd(Depth, na.rm = TRUE),
+    "Depth_IQR" = IQR(Depth, na.rm = TRUE)
+  )
+
+# Statistics by site
+sitestats <- group_by(st_drop_geometry(wall), Site) %>%
+  summarise(
+    count = n(),
+    "Area_mean" = mean(Area, na.rm = TRUE),
+    "Area_sd" = sd(Area, na.rm = TRUE),
+    "Area_IQR" = IQR(Area, na.rm = TRUE),
+    "Rectangularity_mean" = mean(Rectangularity, na.rm = TRUE),
+    "Rectangularity_sd" = sd(Rectangularity, na.rm = TRUE),
+    "Rectangularity_IQR" = IQR(Rectangularity, na.rm = TRUE),
+    "Gap_mean" = mean(Gap, na.rm = TRUE),
+    "Gap_sd" = sd(Gap, na.rm = TRUE),
+    "Gap_IQR" = IQR(Gap, na.rm = TRUE),
+    "Depth_mean" = mean(Depth, na.rm = TRUE),
+    "Depth_sd" = sd(Depth, na.rm = TRUE),
+    "Depth_IQR" = IQR(Depth, na.rm = TRUE)
+  )
+
+# Union
+statistics <- sitestats
+statistics[nrow(statistics) + 1,] = wallstats
+```
+
+```{r}
+#| label: fig-variablesDistribution
+#| fig-cap: Stone blocks variability across the different sites.
+#| fig-width: 7
+#| fig.height: 3
+
+a <- ggplot(wall, aes(x=Area, color=Site)) +
+  geom_density() +
+  scale_color_simpsons() +
+  theme_minimal() +
+  xlab("Area") +
+  ylab("Density")
+
+b <- ggplot(wall, aes(x=Rectangularity, color=Site)) +
+  geom_density() +
+  scale_color_simpsons() +
+  theme_minimal() +
+  ylab(NULL)
+
+c <- ggplot(data=subset(wall, !is.na(Gap)), aes(x=Gap, color=Site)) +
+  geom_density() +
+  scale_color_simpsons() +
+  theme_minimal() +
+  ylab(NULL)
+
+fig.variablesDistribution <- ggarrange(a, b, c, ncol = 3, common.legend = TRUE, legend ="bottom")
+fig.variablesDistribution
+
+ggsave("fig.variablesDistribution.png", path="images", width = 7, height = 3, units = "in", dpi=600)
+```
+
+```{r}
+#| label: tbl-normalDistribution
+#| tbl-cap: Results of the Shapiro-Wilk normality test.
+
+a <- shapiro.test(wall$Area[wall$Site == "K105"])
+b <- shapiro.test(wall$Area[wall$Site == "K110"])
+c <- shapiro.test(wall$Area[wall$Site == "K35"])
+d <- shapiro.test(wall$Area[wall$Site == "K73"])
+
+tmp1 <- unname(c(a$statistic,b$statistic,c$statistic,d$statistic))
+tmp2 <- unname(c(a$p.value,b$p.value,c$p.value,d$p.value))
+
+results <- data.frame(tmp1, tmp2)
+colnames(results) <- c("w","p-value")
+rownames(results) <- c("K105","K110","K35","K73")
+
+results$`p-value` <- format(results$`p-value`, digits = 3)
+
+kable(results) %>%
+  kable_styling(bootstrap_options = c("condensed"),
+                full_width = T,
+                position = "left")
+```
+
+```{r}
+#| label: tbl-homogeneity
+#| tbl-cap: Results of the Fligner-Killeen test of homogeneity of variances.
+
+a <- fligner.test(Area ~ Site, data = wall)
+b <- fligner.test(Rectangularity ~ Site, data = wall)
+c <- fligner.test(Gap ~ Site, data = wall)
+
+tmp1 <- unname(c(a$statistic,b$statistic,c$statistic))
+tmp2 <- unname(c(a$parameter,b$parameter,c$parameter))
+tmp3 <- unname(c(a$p.value,b$p.value,c$p.value))
+            
+results <- data.frame(tmp1, tmp2, tmp3)
+colnames(results) <- c("med chi-squared","df","p-value")
+rownames(results) <- c("Area","Rectangularity","Gap")
+
+results$`p-value` <- format(results$`p-value`, digits = 3)
+
+kable(results) %>%
+  kable_styling(bootstrap_options = c("condensed"),
+                full_width = T,
+                position = "left")
+```
+
+```{r}
+#| label: fig-statistics
+#| fig-cap: Results of the Kruskal-Wallis test and Dunn pairwise comparison.
+#| fig-width: 7
+#| fig.height: 4
+
+dat <- st_drop_geometry(wall)
+
+# Area
+dat_res <- ggbetweenstats(data = dat, x = Site, y = Area,
+                    plot.type = "box",
+                    type = "nonparametric",
+                    pairwise.comparisons = TRUE, # to run post-hoc tests if more than 2 groups
+                    pairwise.display = "significant", # show only significant differences
+                    ggsignif.args = list(textsize = 2, tip_length = 0.01),
+                    bf.message = FALSE, # remove message about Bayes Factor
+                    centrality.plotting = FALSE, # remove central measure
+                    package = "ggsci",
+                    palette = "springfield_simpsons",
+                    xlab = "")
+
+a <- dat_res + 
+  labs(title = dat_res[["labels"]][["subtitle"]][[2]],
+       subtitle = dat_res[["labels"]][["subtitle"]][[3]]) +
+  theme_minimal() +
+  theme(plot.title=element_text(size=10), legend.position="none")
+
+# Rectangularity
+dat_res <- ggbetweenstats(data = dat, x = Site, y = Rectangularity,
+                    plot.type = "box",
+                    type = "nonparametric",
+                    pairwise.comparisons = TRUE, # to run post-hoc tests if more than 2 groups
+                    pairwise.display = "significant", # show only significant differences
+                    ggsignif.args = list(textsize = 2, tip_length = 0.01),
+                    bf.message = FALSE, # remove message about Bayes Factor
+                    centrality.plotting = FALSE, # remove central measure
+                    package = "ggsci",
+                    palette = "springfield_simpsons",
+                    xlab = "")
+
+b <- dat_res + 
+  labs(title = dat_res[["labels"]][["subtitle"]][[2]],
+       subtitle = dat_res[["labels"]][["subtitle"]][[3]]) +
+  theme_minimal() +
+  theme(plot.title=element_text(size=10), legend.position="none")
+
+# Gap
+dat_res <- ggbetweenstats(data = dat, x = Site, y = Gap,
+                    plot.type = "box",
+                    type = "nonparametric",
+                    pairwise.comparisons = TRUE, # to run post-hoc tests if more than 2 groups
+                    pairwise.display = "significant", # show only significant differences
+                    ggsignif.args = list(textsize = 2, tip_length = 0.01),
+                    bf.message = FALSE, # remove message about Bayes Factor
+                    centrality.plotting = FALSE, # remove central measure
+                    package = "ggsci",
+                    palette = "springfield_simpsons",
+                    xlab = "")
+
+c <- dat_res + 
+  labs(title = dat_res[["labels"]][["subtitle"]][[2]],
+       subtitle = dat_res[["labels"]][["subtitle"]][[3]]) +
+  theme_minimal() +
+  theme(plot.title=element_text(size=10), legend.position="none")
+
+# plot together
+fig.statistics <- ggarrange(a, b, c, ncol = 3)
+fig.statistics
+
+ggsave("fig.statistics.png", path="images", width = 7, height = 4, units = "in", dpi=600)
+```
+
+### Wall façades graphical comparison
+
+A second analysis grouped stone façades into clusters based on area and rectangularity. The variable gap area was not used in this analysis because it was not available for every stone or site. The development of this cluster analysis aimed at providing a visual tool for comparative analysis between and within wall sections and at identifying meaningful categories of stone size functional to the calculation of volume and labour costs. A first step involved identifying an optimal number of clusters using the silhouette method, which was then used to divide blocks into clusters using a k-means clustering algorithm (@fig-clusterGraph). This analysis identified three clusters. Cluster 1 and 3 group blocks of small façade areas according to rectangularity index, with cluster 3 characterised by higher rectangularity. Cluster 2, instead, groups blocks with the largest façade area.
+
+```{r}
+#| label: cluster calculation
+#| output: false
+
+# Create a subset and then scale Area and rectangularity
+subset_wall <- wall[c("ID", "Area", "Rectangularity")] # subset
+subset_wall <- na.omit(subset_wall) # dropping missing fields if any
+subset_wall <- drop_units(st_drop_geometry(subset_wall)) # drop geometry
+
+# Scaling
+subset_wall <- subset_wall %>% 
+  mutate(Area = scale(Area)) %>%
+  mutate(Rectangularity = scale(Rectangularity))
+
+# Determining optimal number of clusters
+clust <- fviz_nbclust(subset_wall[c('Area', 'Rectangularity')], kmeans, method = "silhouette", linecolor = "gray30")
+
+n_clust <- clust$data
+max_cluster <- as.numeric(n_clust$clusters[which.max(n_clust$y)])
+
+#Kmeans clustering
+Cluster <- kmeans(subset_wall[c('Area', 'Rectangularity')], centers = max_cluster, nstart = 25)
+
+# Clusters extraction
+subset_wall <- subset_wall %>%
+  mutate(Cluster = Cluster$cluster)
+
+wall <- left_join(wall, subset_wall %>% 
+              dplyr::select(ID, Cluster), by = "ID")
+
+wall$Cluster = as.factor(wall$Cluster)
+```
+
+```{r}
+#| label: fig-clusterGraph
+#| fig-cap: Results of the silhouette method with indicated the optimal number of clusters (a) and scatter plot of the consequent division in clusters (b).
+#| fig-width: 7
+#| fig.height: 5
+
+myfill <- scale_color_manual(values = c("#D2af81ff", "#b7bbbfff", "#1a9993ff"))
+
+a <- clust +
+  theme_minimal() +
+  ggtitle("a")
+
+b <- ggplot(wall, aes(x=Area, y=Rectangularity, color=Cluster)) + 
+  geom_point() +
+  myfill +
+  theme_minimal() +
+  ggtitle("b")
+
+fig.clusterGraph <- ggarrange(a, b, nrow = 2)
+fig.clusterGraph
+
+ggsave("fig.clusterGraph.png", path="images", width = 7, height = 4, units = "in", dpi=600)
+```
+
+Visualising the clusters on the walls (@fig-clusterPlot), it becomes clear how the composition of K73, with a predominant distribution of blocks of cluster 3, considerably differs from the other sites. Although less marked, site K105 also presents observable differences with blocks of cluster 3 tending to be located on the upper part of the wall. We might expect stone blocks of exceptional size on the lower portions of a structure, and it is therefore interesting to notice how this is not the case and how the lower parts of K105 are built primarily with smaller block compositions of clusters 1 and 2, similar to K35 and K110. K105 is the only site showing evidence of later reoccupation during the Medieval period, and the pattern of large blocks high up on the wall might reflect later repair. Cluster analysis also revealed a noteworthy pattern at site K35, where two sections of the wall show a high concentration of cluster 3 stone blocks in contrast with the general composition of the wall. Site K35 sits on a steeply sloping ridge. Today, a large part of the wall has collapsed down the slope, and it is likely that collapses occurred in the past. The pattern of different blocks might reflect earlier repair efforts.
+
+```{r}
+#| label: cluster statistics
+#| output: false
+
+# Total statistics
+wallstats <- wall
+wallstats$Cluster <- "Total sample"
+wallstats <- group_by(st_drop_geometry(wallstats), Cluster) %>%
+  summarise(
+    count = n(),
+    "Area_mean" = mean(Area, na.rm = TRUE),
+    "rectangularity_mean" = mean(Rectangularity, na.rm = TRUE),
+    "Depth_mean" = mean(Depth, na.rm = TRUE)
+  )
+
+# Statistics by cluster
+clusterstats <- group_by(st_drop_geometry(wall), Cluster) %>%
+  summarise(
+    count = n(),
+    "Area_mean" = mean(Area, na.rm = TRUE),
+    "rectangularity_mean" = mean(Rectangularity, na.rm = TRUE),
+    "Depth_mean" = mean(Depth, na.rm = TRUE)
+  )
+
+# Union
+clusterstats$Cluster <- as.character(clusterstats$Cluster)
+clusterstatistics <- clusterstats
+clusterstatistics[nrow(clusterstatistics) + 1,] = wallstats
+```
+
+```{r}
+#| label: fig-clusterPlot
+#| fig-cap: Plotting of the identified clusters on the wall stretches.
+#| fig-width: 7
+#| fig.height: 3
+
+myfill <- scale_fill_manual(values = c("#D2af81ff", "#b7bbbfff", "#1a9993ff"))
+
+fig.clusterPlot <- ggplot(wall, aes(fill = Cluster)) + 
+  geom_sf(size = 0.06) + 
+  mytheme +
+  myscale +
+  myfill +
+  theme(legend.position = c(0.935, 0.25)) +
+  annotate("text", x = 0.7, y = 36, size=2.5, label = "K73") +
+  annotate("text", x = 1.2, y = 24, size=2.5, label = "K105") +
+  annotate("text", x = 0.7, y = 14, size=2.5, label = "K35") +
+  annotate("text", x = 1.2, y = 4, size=2.5, label = "K110")
+
+fig.clusterPlot
+
+ggsave("fig.clusterPlot.png", path="images", width = 7, height = 3, units = "in", dpi=600)
+```
+
+In summary, both statistical and graphical comparisons reveal that site K73 significantly differs from the others, while the wall at site K105 also showed differences, but not to the same extent. Following Lugli's typology (Lugli 1957), we might assign the wall of K73 to the first style and the other sites' walls to the second style, with site K105 showing some resemblance to the third style. Interestingly, the two divergent sites, K73 and K105, are located in Campania, while the other sites are in Molise. Their particularity might represent slight interregional variations of building style. We include K105 together with K35 and K110 for the purpose of energetics analysis. The more significant difference in masonry observed at K73 argues for treating it separately.
+
+## Energetics
+
+An energetics analysis of the labour input required to build these structures starts from a volumetric reconstruction of materials and building processes (McCurdy and Abrams 2019, 4). Without excavation, detailed reconstruction of the internal structure of the walls is not available, but some broader observations are possible. Previous study identifies two internal construction types for Samnite sites with polygonal masonry walls (Oakley 1995, 12; Colonna 2012; Bradley et al. 2014; De Benedittis 2017, 14-17; Renda 2017). The first (Type A) is characterised by the use of interior as well as exterior stone curtains encasing a fill of rubble and earth, while the second (Type B) shows only a single outer curtain retaining a fill of similar composition. Generally, walls of Type A tend to display outer curtains of larger, more finished blocks with interior curtains built of smaller stones and sometimes buried under an earthen rampart (De Benedittis 2017, 16). There is evidence that Type A and Type B walls appear together in single fortification systems, with the two techniques adopted according to the morphology of the terrain (De Benedittis 2017, 14). Of the sites studied here, the recorded wall stretches of K73 belong to Type B, while the other three sites feature walls of Type A. As already noted, K73 also stands out for the variables of its masonry, suggesting variations of technique extended both to the structure’s plan and its construction.
+
+### Façade composition
+
+One hindrance to the calculation of the volume of blocks is that, absent excavation, it is not always possible to record depth. As a result, the energetics approach we constructed cannot rely on the similar level of granular measurement for block depth as it does for exterior surface. One possible way forward would be simply to multiply the linear area of each structure by the mean depth of those limited blocks for which depths are measurable. However, this procedure would misrepresent the significant variability of block size. Because observable data show positive correlation between the façade area variable and depth, we used the depth mean value of each cluster multiplied by the façade area of the respective blocks of that cluster to obtain approximate volumes of each block (@fig-depth). The resulting calculation is used to reconstruct a hypothetical cube of building stone whose average side surface size for each cluster is reported in @tbl-sideSize.
+
+```{r}
+#| label: fig-depth
+#| fig-cap: Scatter plot of depth and area distribution by site type (a) and depth distribution by cluster (b).
+#| fig-width: 7
+#| fig.height: 3
+
+wall_noNull <- wall
+wall_noNull$Gap <- NULL 
+
+#myfill <- scale_fill_manual(values = c("#D2af81ff", "#b7bbbfff", "#fd7446ff"))
+myfill <- scale_fill_manual(values = c("#D2af81ff", "#b7bbbfff", "#1a9993ff"))
+mycol <- scale_color_manual(values = c("#FED439FF", "#709AE1FF", "#8A9197FF"))
+
+a <- ggplot(na.omit(wall_noNull), aes(x=Area, y=Depth)) + 
+  geom_point(aes(color=Site)) +
+  geom_smooth(method=lm, color="black") +
+  theme(legend.position = "none") +
+  mycol +
+  theme_minimal() +
+  ggtitle("a")
+
+b <- ggplot(na.omit(wall_noNull), aes(x=Cluster, y=Depth, fill=Cluster)) + 
+  geom_boxplot() +
+  theme(legend.position = "none") +
+  myfill +
+  theme_minimal() +
+  ylab(NULL) +
+  ggtitle("b") +
+  annotate("text", 
+           x = 1:length(table(na.omit(wall_noNull)$Cluster)),
+           y = aggregate(Depth ~ Cluster, na.omit(wall_noNull), median)[ , 2],
+           label = paste("n=",table(na.omit(wall_noNull)$Cluster)),
+           vjust = - 0.5, cex = 2.5)
+
+fig.depth <- ggarrange(a, b, ncol = 2)
+fig.depth
+
+ggsave("fig.depth.png", path="images", width = 7, height = 3, units = "in", dpi=600)
+```
+
+```{r}
+#| label: tbl-sideSize
+#| tbl-cap: Properties of the average stone block by cluster.
+
+# Calculation of single stones volumes
+wall <- wall %>%
+  mutate(clustdepth = case_when(Cluster == 1 ~ clusterstatistics$Depth_mean[1], 
+                           Cluster == 2 ~ clusterstatistics$Depth_mean[2], 
+                           Cluster == 3 ~ clusterstatistics$Depth_mean[3]
+                           ))
+
+wall$volume <- wall$Area*wall$clustdepth
+
+# Average side size by cluster
+## Cuberoot function
+cuberoot = function(x){
+    if(x < 0)
+    { - (-x)^(1/3)}
+    else
+    {x^(1/3)}
+}
+
+## Total statistics
+wallstats <- wall
+wallstats$Cluster <- "Total sample"
+wallstats <- group_by(st_drop_geometry(wallstats), Cluster) %>%
+  summarise(
+    Count = n(),
+    "Mean volume (m^3)" = mean(volume, na.rm = TRUE),
+    "SD volume (m^3)" = sd(volume, na.rm = TRUE),
+    "IQR volume (m^3)" = IQR(volume, na.rm = TRUE),
+    "Average stone Side (m)" = cuberoot(mean(volume, na.rm = TRUE)),
+  )
+
+## Statistics by Cluster
+clusterstats <- group_by(st_drop_geometry(wall), Cluster) %>%
+  summarise(
+    Count = n(),
+    "Mean volume (m^3)" = mean(volume, na.rm = TRUE),
+    "SD volume (m^3)" = sd(volume, na.rm = TRUE),
+    "IQR volume (m^3)" = IQR(volume, na.rm = TRUE),
+    "Average stone side (m)" = cuberoot(mean(volume, na.rm = TRUE)),
+  )
+
+## Union
+clusterstats$Cluster <- as.character(clusterstats$Cluster)
+clusterstatistics_volume <- clusterstats
+clusterstatistics_volume[nrow(clusterstatistics_volume) + 1,] = wallstats
+
+## table
+kable(clusterstatistics_volume, digits = 2) %>%
+  kable_styling(bootstrap_options = c("condensed"),
+                full_width = T,
+                position = "left")
+```
+
+Next, an average façade composition by square metre was calculated for walls of Type A and Type B according to three volume classes: stones measuring below 0.2 m^3^, between 0.2-0.5 m^3^, and above 0.5 m^3^. This subdivision was undertaken according to established differences for calculating energy input discussed below in section @sec-LabourCostCalculation. The compositions are visible in @tbl-percentage. The average façade composition data were used to calculate average façade volume by m^3^. That is, using these calculations we were able to reconstruct clusters of walls according to a tailored reconstruction of the stone blocks' volume according to their mean size. This allows us to assess how many stones used for the façade wall occupied the overall wall dimensions. Results presented in @tbl-volume show that the average volume of wall occupied by stones of Type B is greater than Type A and directly relates to the higher number of large-sized stones used in its construction.
+
+```{r}
+#| label: tbl-percentage
+#| tbl-cap: Percentage of façade composition divided by blocks below 0.2m^3, between 0.2 and 0.5m^3, above 0.5m^3 and gap area of walls of Type-A and Type-B.
+
+# Calculation of the facade volume of the different types
+wallgap$Area_wallgap <- drop_units(st_area(wallgap))
+wallfilled$Area_wallfilled <- drop_units(st_area(wallfilled))
+
+## Calculation for the entire wall
+### type-A
+tA_wall <- subset(wall, wall$Site != "K73")
+tA_wallgap <- subset(wallgap, wallgap$Site != "K73")
+tA_wallfilled <- subset(wallfilled, wallfilled$Site != "K73")
+tA_volperc_gap <- sum(tA_wallgap$Area_wallgap)*100/(sum(tA_wallfilled$Area_wallfilled))
+tA_volgap <- sum(tA_wall$volume)*tA_volperc_gap/100
+tA_voltotal <-sum(tA_wall$volume)+tA_volgap
+
+### type-B
+tB_wall <- subset(wall, wall$Site == "K73")
+tB_wallgap <- subset(wallgap, wallgap$Site == "K73")
+tB_wallfilled <- subset(wallfilled, wallfilled$Site == "K73")
+tB_volperc_gap <- sum(tB_wallgap$Area_wallgap)*100/(sum(tB_wallfilled$Area_wallfilled))
+tB_volgap <- sum(tB_wall$volume)*tB_volperc_gap/100
+tB_voltotal <-sum(tB_wall$volume)+tB_volgap
+
+##Calculation by linear m
+### type-A
+tA_volperc_upto0.2 <- sum(tA_wall$volume[tA_wall$volume<=0.2])*100/tA_voltotal
+tA_volperc_0.2to0.5 <- sum(tA_wall$volume[tA_wall$volume>0.2 & tA_wall$volume<=0.5])*100/tA_voltotal
+tA_volperc_over0.5 <- sum(tA_wall$volume[tA_wall$volume>0.5])*100/tA_voltotal
+
+### type-B
+tB_volperc_upto0.2 <- sum(tB_wall$volume[tB_wall$volume<=0.2])*100/tB_voltotal
+tB_volperc_0.2to0.5 <- sum(tB_wall$volume[tB_wall$volume>0.2 & tB_wall$volume<=0.5])*100/tB_voltotal
+tB_volperc_over0.5 <- sum(tB_wall$volume[tB_wall$volume>0.5])*100/tB_voltotal
+
+### façade composition matrix
+composition <- matrix(1:8, nrow = 4, ncol = 2)
+composition <- rbind(c(tA_volperc_upto0.2,tB_volperc_upto0.2),
+           c(tA_volperc_0.2to0.5,tB_volperc_0.2to0.5),
+           c(tA_volperc_over0.5,tB_volperc_over0.5),
+           c(tA_volperc_gap,tB_volperc_gap))
+rownames(composition) <- c("upto0.2","0.2to0.5","over0.5", "gap")
+colnames(composition) <- c("tA","tB")
+
+### façade composition table
+compositiontab <- composition
+rownames(compositiontab) <- c("Percentage of blocks up to 0.2m^3","Percentage of blocks between 0.2 and 0.5m^3", "Percentage of blocks over 0.5m^3","Gaps")
+colnames(compositiontab) <- c("Type-A","Type-B")
+kable(compositiontab, digits = 1) %>%
+  kable_styling(bootstrap_options = c("condensed"),
+                full_width = T,
+                position = "left")
+```
+
+```{r}
+#| label: tbl-volume
+#| tbl-cap: Type-A and Type-B wall volumes divided by block composition.
+
+## facade volume by sqm of facade calculated proportional to facade composition
+### type-A
+tA_avervol_upto0.2 <- tA_voltotal/sum(tA_wallfilled$Area)*composition["upto0.2","tA"]/100
+tA_avervol_0.2to0.5 <- tA_voltotal/sum(tA_wallfilled$Area)*composition["0.2to0.5","tA"]/100
+tA_avervol_over0.5 <- tA_voltotal/sum(tA_wallfilled$Area)*composition["over0.5","tA"]/100
+tA_facadevol <- tA_avervol_upto0.2 + tA_avervol_0.2to0.5 + tA_avervol_over0.5
+
+### type-B
+tB_avervol_upto0.2 <- tB_voltotal/sum(tB_wallfilled$Area)*composition["upto0.2","tB"]/100
+tB_avervol_0.2to0.5 <- tB_voltotal/sum(tB_wallfilled$Area)*composition["0.2to0.5","tB"]/100
+tB_avervol_over0.5 <- tB_voltotal/sum(tB_wallfilled$Area)*composition["over0.5","tB"]/100
+tB_facadevol <- tB_avervol_upto0.2 + tB_avervol_0.2to0.5 + tB_avervol_over0.5
+
+### matrix
+stonevolume <- matrix(1:8, nrow = 4, ncol = 2)
+stonevolume <- rbind(c(tA_avervol_upto0.2,tB_avervol_upto0.2),
+           c(tA_avervol_0.2to0.5,tB_avervol_0.2to0.5),
+           c(tA_avervol_over0.5,tB_avervol_over0.5),
+           c(tA_facadevol,tB_facadevol))
+rownames(stonevolume) <- c("upto0.2","0.2to0.5","over0.5", "total")
+colnames(stonevolume) <- c("tA","tB")
+
+### table
+stonevolumetab <- stonevolume
+rownames(stonevolumetab) <- c("Volume of blocks up to 0.2 (m^3)","Volume of blocks between 0.2 and 0.5 (m^3)", "Volume of blocks over 0.5 (m^3)","Total (m^3)")
+colnames(stonevolumetab) <- c("Type-A","Type-B")
+kable(stonevolumetab, digits = 2) %>%
+  kable_styling(bootstrap_options = c("condensed"),
+                full_width = T,
+                position = "left")
+```
+
+### Wall volumetrics
+
+Polygonal masonry at Samnite sites show a range of characteristic dimensions with which to reconstruct volume. Published material shows structures between 1.5-2.5 m deep, leading us to use a mean depth of 2.0 m in our reconstructions. Wall height appears more variable and is a more difficult question, but evidence suggests hillforts were lower than typical for contemporary fortifications in urban sites. In his fundamental work on Samnite hillforts, Oakley (1995, 14) suggests a range of 3.0-4.0 m. The AHS greatly expands the number of sites in consideration, and this data support the lower end of this range. This figure is lower than typical for other, especially urban, regional fortifications. We note the recent establishment by Frederiksen (2011, 95) of a mean height of 6.0 m for Greek Archaic citywalls. In urban situations in Greek South Italy contemporary to our hillforts, taller walls are often encountered, as height formed an important component of these structures’ poliorcetic aims. Nonetheless, data from Samnium strongly suggest hillforts were on average shorter. This is true even for the most complex examples. Importantly, excavation data from the fortifications of Monte Vairano, one of the largest of all hillforts and built on a relatively flat site, indicates an average height of only 2.0 m increasing to 3.0 m close to the main gate of Porta Vittoria (De Benedittis 1988, 40; De Benedittis 2017, 16). Similar heights are reported by studies of well-preserved structures: at Castel Canonico in Molise, fortifications average 2.0 m in height (De Benedittis and Ricci 2007, 20-21); at Monte Pugliano in Campania, they average 1.6 m, reaching a maximum 3.0 m only in select stretches (Renda 2017, 136). Rare outliers are often ascribable to local circumstances. The site of Trebula Balliensis, for example, reaches 10.0 m in some places but is the only hillfort of its scale built in a valley between peaks. In general, the lower average height of Samnite hillforts might be explained by terrain and location, as highly sloping hillsides mitigated the need for tall constructions. Meanwhile, evidence is fragile and difficult to interpret from these hillforts for anti-artillery measures, as seen in coeval urban fortifications in Italy (cf. Karlsson 1992; Benvenuti 2002). 
+
+Sites selected for this study trend towards the lower end of Oakley’s suggested range and support a mean height of 3.0 m. The external wall of the double circuit of Monte Santa Croce (K105) averages only 1.5 m high, and the internal wall 3.0 m (Renda 2018, 21). Only Monte Cila (K73) stands above the upper limit of the AHS data with a few preserved stretches stranding up to 5.0 m, probably to compensate for depressions in the underlying terrain. Subsequently and considering the variation observed, we provide a range of calculations for two heights, using the 3.0 m figure as our average wall height in reconstructions of a typical Samnite fortification while we also report costs for walls of 5.0 m height to reflect the construction of exceptional cases. 
+
+We next calculate the different material processes required for its construction. No direct data were available for calculating the volume of the interior curtain of walls of Type A. This study assumes a volume of stonemasonry equal to half of the outer curtain wall built utilising only stones of dimensions below 0.2 m^3^. This procedure was chosen to reflect the tendency of internal curtains in better documented cases to be built with stones considerably smaller than outer curtains. We calculate the volume of earth and rubble fill by subtracting from the generalised linear wall volume the volume of the stonemasonry of the curtain wall or walls. (@tbl-total).
+
+```{r}
+#| label: tbl-total
+#| tbl-cap: Total volume of stones and rubble for a wall section 2 m deep and 1 m high of Type-A and Type-B walls.
+#####################
+### Type-A and type-B (by linear m)
+sectiondepth <- 2
+sectionheight <- 1
+
+volsection <- 1*sectiondepth*sectionheight
+
+tA_volstones <- tA_facadevol*2*sectionheight
+tA_volrubble <- volsection-tA_volstones
+
+tB_volstones <- tB_facadevol*sectionheight
+tB_volrubble <- volsection-tB_volstones
+
+### matrix
+materialsvolume <- matrix(1:4, nrow = 2, ncol = 2)
+stonevolume <- rbind(c(tA_volstones,tB_volstones),
+           c(tA_volrubble,tB_volrubble))
+rownames(stonevolume) <- c("volstones","volrubble")
+colnames(stonevolume) <- c("tA","tB")
+
+### table
+stonevolumetab <- stonevolume
+rownames(stonevolumetab) <- c("Stone volume (m^3)","Rubble volume (m^3)")
+colnames(stonevolumetab) <- c("Type-A","Type-B")
+kable(stonevolumetab, digits = 2) %>%
+  kable_styling(bootstrap_options = c("condensed"),
+                full_width = T,
+                position = "left")
+```
+
+### Labour Cost Calculation {#sec-LabourCostCalculation}
+
+The three variables calculated above help inform the estimation of labour costs of polygonal masonry. Particularly in shaping blocks, gap area and rectangularity index bear direct relationship to labour cost. As noted, these variables can be understood as formal expressions of Lugli's (1957) typology according to levels of refinement. Rectangularity index exhibits a positive correlation to labour cost as compared to ashlar masonry. A wall with rectangularity index of 1.0 requires identical costs to ashlar, while a lower index score implies less effort shaping blocks. Gap area calculations negatively correlate to cost, as increasing labour is needed to fit blocks tightly against each other in a wall. In future, a larger sample size would allow for a more nuanced understanding of the quantitative implications of these variables. For the purpose of this study, we took these factors into account qualitatively in selecting between sources of comparative data.
+
+Before turning to the analysis, it is necessary to consider differences of material, technology, or biological capacity between the society constructing the monument under analysis and the largely modern sources of data (Bernard 2018: 78). As far as possible, we sought to employ comparative data for stonemasonry using hard limestone similar to material characteristic of Samnite hillforts. Limestone is broadly typical of polygonal masonry in Italy (Cifarelli 2008). For technology, we assume use of iron tools common in Italian architecture of the period. There are no indications from the four sites of the use of lifting machines (cf. Cifani 2008: 242-43; Bernard 2018: 212-20), suggesting levers, sledges, and ramps were employed to raise and position blocks. Finally, Bernard 2022 shows that body size impacts a worker's productive capacity. Bioarchaeology of Iron Age and Hellenistic human skeletal remains from Italy, including cemeteries in Samnium, suggests an average stature somewhat taller than in the subsequent Roman period, more comparable to Mediaeval and Early Modern periods (Gianecchini, Moggi Cecchi 2008). This facilitates comparison with postantique data.
+
+he building process of the three hillforts may be decomposed into three main stages: 1. Quarrying and material extraction, 2. Site preparation, 3. On-site assembly and shaping. For this study, we assume minimal transportation costs. AHS identifies quarry sites directly on the hilltops of fortified Samnite settlements, often in close proximity to wall circuits. In some cases, bedrock was quarried to provide level foundations for walls (e.g. Renda 2017, 2018). This suggests a commonly seen arrangement in which stone for polygonal masonry was extracted in loco or from sources close to ongoing construction (Brown 1951: 35; De Rossi 2009).
+
+Workers quarried blocks by splitting stone off bedrock using wedges or feathers set into natural fissures and breaks. This process differs from channelling, where blocks are freed from the bedrock by cutting channels downward or inward from flat surfaces. Data suggest a wide range of work-rates for stone-quarrying, but the literature acknowledges significantly different labour inputs between these two main approaches, with surface quarrying being far less labour intensive than channelling. Consequently, we use the faster rate of 0.1 m^3^/ph favoured by Brysbaert (2015: 94) based on timed experiments by Bessac 2007 (cf. Devolder 2013:43; Boswinkel 2021: 106). Rubble extraction from bedrock is faster, with rates of 0.5 m^3^/ph based on Boswinkel's synthesis of historical data for limestone rubble (2021: 106).
+
+Samnite fortifications were built directly on bedrock. At all sites, bedrock is exposed or near the surface, suggesting the appropriateness of lower rates for carving back rocky soil or exposed rock to maximum 1 m depths. Because the terrain in most places is steep, we use the higher end of the range for this activity proposed by Boswinkel (2021: 119) of 0.3 m^3^/ph.
+
+Blocks at almost all Samnite hillforts show few signs of finishing or drafting. We assume minimal processing of quarried stone with loss rates of quarried-to-assembled material closer to the 15% of volume reported by Devolder (2013: 32) than upwards of 45% for dressed ashlar reported by Abrams (1994: 46). The relatively high gap area observed in masonry of sites studied here suggests minimal work shaping blocks to fit each other. Consequently, we assume no separate shaping stage of production between quarry and assembly. Future work on more refined polygonal masonry might consider whether a separate shaping stage was required to produce tightly joined blocks, and costs are reported by Pegoretti (1863: vol. I 430) for shaping Italian limestones. For our model, we note that Pegoretti’s assembly cost model (cf. 1863: vol. II 99; see below) refers to teams of six workers including stone-cutters and masons. This implies block shaping costs folded into assembly, and we take this production stage as sufficient for shaping stones for the masonry typical of Samnite hillforts.
+
+For assembly costs, it is critical to formulate a standard work rate that could account for differently sized blocks at the sites studied here. Several recent attempts to quantify assembly rates for Bronze Age Aegean architecture also consider unmortared masonry of roughly worked blocks. However, rates used are either based on estimates for ashlar (e.g. Devolder 2013: 34) or consider units of stone either too small (Harper 2016) or too large (Boswinkel 2021) for our purposes. Instead, our approach is to combine historical data both adapted to polygonal masonry and tailored for variable block sizes. We provide a variable rate that can be extrapolated onto the calculation of clusters for each structure. Pegoretti offers a work rate for "cubic meter of fortifications, bastions, and circuit walls built with worked or unworked stone in squared or polyhedral form" (1863 II.100-2). He clarifies that, by polyhedral, he refers to what we call polygonal masonry. Using his formula, we derive a rate of 0.0259 m^3^/ph to assemble a wall of polygonal masonry three meters high and 0.019 m3/ph for a wall five meters high. This figure falls within the range of observed production rates for ashlar reported by Mayes (1859: 24). Usefully, Mayes differentiates assembly costs by block size, with structures built of smaller stones requiring less time: 0.034 m^3^/ph for blocks up to 0.2 m^3^, 0.024 m^3^/ph for stones between 0.2-0.5 m^3^, and 0.019 m^3^/ph for stones over 0.5m^3^. While Mayes' reference to ashlar masonry is inappropriate for our purposes, the observed ratio (0.79:1.00:1.42) may be applied to Pegoretti's coefficient for polygonal masonry, since the ratio depends on the scale of a block's weight, not necessarily its shape. We take Pegoretti's 0.0259 m^3^/ph as referring to medium-sized stones and produce a variable assembly rate for size-class of blocks.
+
+Alongside stone construction, the other major assembly cost is rubble and earth fill. Components of this fill are easily manoeuvrable, and we use a figure of 0.375 m^3^/ph for a situation of low transportation costs and simple technology (Richardson 2015: 305-6; compare Bernard 2018: 238 n. 24). We assume minimal production costs for rubble largely obtained as a by-product of shaping quarry stone.
+
+Following Delaine (1997: 268), we account for a percentage added to the total cost for supervision. Her figure of 10% derived from Pegoretti may be high for ancient situations. Boswinkel (2021: 156) produces documentary evidence to support a figure closer to 4% of the workforce for Mycenaean construction. An account of an ancient workforce for Hellenistic wall-construction by the Greek historian Dionysius of Halicarnassus (14.8.3-8) likewise suggests a ratio of 7 supervisors to 200 workers, or 3.5% (Bernard 2018: 100-2). We therefore add a total of 4% to account for this aspect of the workforce.
+
+Putting everything together, we present @tbl-independentrates and @tbl-dependentrates summarising the energetics rates employed and @tbl-costs reporting the estimated costs for building the walls of Type-A and Type-B. The values are provided for walls 3 and 5 m tall.  In @tbl-results, instead, we report the total estimated costs for the different sites analysed according to the mapping carried on by the AHS. These are provided for walls 3 and 5 m tall in person-hours and in days considering a hypothetical workforce of 100 people working 8 h a day, and taking into account whether each site’s fortifications display a Type A or Type B configuration. With no direct evidence of work team size or organization, these figures are speculative. The figure for workforce size represents half that of the work groups reported by our single contemporaneous source for building a fortification wall in Italy at Syracuse in 401 BCE. This project involved teams of 200 workers, but the walls were ashlar masonry and about twice the size of a typical Samnite hillfort (Diod. Sic. 14.18.5; cf. Bernard 2018, 99-102).
+
+```{r}
+#| label: tbl-independentrates
+#| tbl-cap: Energetics rates employed in the analysis independent of wall height.
+
+# Energetics index m^3/ph
+in_quarrywall <- 0.1
+in_quarryrubble <- 0.5
+in_leveling <- 0.3
+in_buildrubbleearth <- 0.375
+in_supervision <- 0.04 #4% increase of the final labour
+in_quarrylost <- 0.15 #15% increase of the effective volume
+
+# Summary
+energetics <- matrix(1:4, nrow = 4, ncol = 1)
+energetics <- rbind(in_quarrywall,
+                    in_quarryrubble,
+                    in_leveling,
+                    in_buildrubbleearth)
+rownames(energetics) <- c("Stone quarry (m^3/ph)",
+                       "Rubble quarry (m^3/ph)",
+                       "Leveling (m^3/ph)",
+                       "Assembly rubble and earth fill (m^3/ph)")
+colnames(energetics) <- ("Rates")
+kable(energetics, digits = 4) %>%
+  kable_styling(bootstrap_options = c("condensed"),
+                full_width = T,
+                position = "left")
+```
+
+```{r}
+#| label: tbl-dependentrates
+#| tbl-cap: Energetics rates employed in the analysis dependent on wall height.
+
+# Energetics index m^3/ph
+in_buildstoneupto0.2_3m <- 0.037
+in_buildstone0.2to0.5_3m <- 0.025
+in_buildstoneover0.5_3m <- 0.020
+
+in_buildstoneupto0.2_5m <- 0.027
+in_buildstone0.2to0.5_5m <- 0.019
+in_buildstoneover0.5_5m <- 0.015
+
+# Summary
+energetics <- matrix(1:6, nrow = 3, ncol = 2)
+energetics <- rbind(c(in_buildstoneupto0.2_3m,in_buildstoneupto0.2_5m),
+                    c(in_buildstone0.2to0.5_3m,in_buildstone0.2to0.5_5m),
+                    c(in_buildstoneover0.5_3m,in_buildstoneover0.5_5m))
+rownames(energetics) <- c("Assembly up to 0.2 m^3 (m^3/ph)",
+                       "Assembly between 0.2 and 0.5 m^3 (m^3/ph)",
+                       "Assembly above 0.5 m^3 (m^3/ph)")
+colnames(energetics) <- c("Rates (3 m)", "Rates (5 m)")
+kable(energetics, digits = 4) %>%
+  kable_styling(bootstrap_options = c("condensed"),
+                full_width = T,
+                position = "left")
+```
+
+```{r}
+#| label: tbl-costs
+#| tbl-cap: Costs estimated for building wall Type-A and Type-B expressed as a linear rate of ph per m. Values provided for walls 3 and 5 m tall. 
+
+# 3 m
+walldepth_3m <- sectiondepth
+wallheight_3m <- 3
+
+## Material acquisition
+### Type-A
+tA_materialstone_3m <- (tA_volstones+tA_volstones*in_quarrylost)*wallheight_3m/in_quarrywall
+tA_materialrubble_3m <- tA_volrubble*wallheight_3m/in_quarryrubble
+tA_materialtotal_3m <- tA_materialstone_3m+tA_materialrubble_3m
+
+### Type-B
+tB_materialstone_3m <- (tB_volstones+tB_volstones*in_quarrylost)*wallheight_3m/in_quarrywall
+tB_materialrubble_3m <- tB_volrubble*wallheight_3m/in_quarryrubble
+tB_materialtotal_3m <- tB_materialstone_3m+tB_materialrubble_3m
+
+## Leveling the terrain
+### Type-A
+tA_leveling_3m <- walldepth_3m/in_leveling
+### Type-B
+tB_leveling_3m <- (walldepth_3m/2)/in_leveling
+
+## Wall assembly
+### Type-A
+tA_assemblyouter_3m <- (((tA_facadevol*(composition["upto0.2","tA"]/100))/in_buildstoneupto0.2_3m)+
+  ((tA_facadevol*(composition["0.2to0.5","tA"]/100))/in_buildstone0.2to0.5_3m)+
+  ((tA_facadevol*(composition["over0.5","tA"]/100))/in_buildstoneover0.5_3m))*wallheight_3m
+tA_assemblyinner_3m <- (tA_facadevol/in_buildstoneupto0.2_3m)*wallheight_3m
+tA_assemblyfill_3m <- tA_volrubble*wallheight_3m/in_buildrubbleearth
+tA_assemplytotal_3m <- tA_assemblyouter_3m+tA_assemblyinner_3m+tA_assemblyfill_3m
+### Type-B
+tB_assemblyouter_3m <- (((tB_facadevol*(composition["upto0.2","tB"]/100))/in_buildstoneupto0.2_3m)+
+  ((tB_facadevol*(composition["0.2to0.5","tB"]/100))/in_buildstone0.2to0.5_3m)+
+  ((tB_facadevol*(composition["over0.5","tB"]/100))/in_buildstoneover0.5_3m))*wallheight_3m
+tB_assemblyfill_3m <- tB_volrubble*wallheight_3m/in_buildrubbleearth
+tB_assemplytotal_3m <- tB_assemblyouter_3m+tB_assemblyfill_3m
+
+## Supervision
+### Type-A
+tA_sup_3m <- in_supervision*(tA_materialtotal_3m+tA_leveling_3m+tA_assemplytotal_3m)
+### Type-B
+tB_sup_3m <- in_supervision*(tB_materialtotal_3m+tB_leveling_3m+tB_assemplytotal_3m)
+
+## Total
+### Type-A
+tA_total_3m <- tA_materialtotal_3m+tA_leveling_3m+tA_assemplytotal_3m+tA_sup_3m
+### Type-B
+tB_total_3m <- tB_materialtotal_3m+tB_leveling_3m+tB_assemplytotal_3m+tB_sup_3m
+
+
+# 5 m
+walldepth_5m <- sectiondepth
+wallheight_5m <- 5
+
+## Material acquisition
+### Type-A
+tA_materialstone_5m <- (tA_volstones+tA_volstones*in_quarrylost)*wallheight_5m/in_quarrywall
+tA_materialrubble_5m <- tA_volrubble*wallheight_5m/in_quarryrubble
+tA_materialtotal_5m <- tA_materialstone_5m+tA_materialrubble_5m
+
+### Type-B
+tB_materialstone_5m <- (tB_volstones+tB_volstones*in_quarrylost)*wallheight_5m/in_quarrywall
+tB_materialrubble_5m <- tB_volrubble*wallheight_5m/in_quarryrubble
+tB_materialtotal_5m <- tB_materialstone_5m+tB_materialrubble_5m
+
+## Leveling the terrain
+### Type-A
+tA_leveling_5m <- walldepth_5m/in_leveling
+### Type-B
+tB_leveling_5m <- (walldepth_5m/2)/in_leveling
+
+## Wall assembly
+### Type-A
+tA_assemblyouter_5m <- (((tA_facadevol*(composition["upto0.2","tA"]/100))/in_buildstoneupto0.2_5m)+
+  ((tA_facadevol*(composition["0.2to0.5","tA"]/100))/in_buildstone0.2to0.5_5m)+
+  ((tA_facadevol*(composition["over0.5","tA"]/100))/in_buildstoneover0.5_5m))*wallheight_5m
+tA_assemblyinner_5m <- (tA_facadevol/in_buildstoneupto0.2_5m)*wallheight_5m
+tA_assemblyfill_5m <- tA_volrubble*wallheight_5m/in_buildrubbleearth
+tA_assemplytotal_5m <- tA_assemblyouter_5m+tA_assemblyinner_5m+tA_assemblyfill_5m
+### Type-B
+tB_assemblyouter_5m <- (((tB_facadevol*(composition["upto0.2","tB"]/100))/in_buildstoneupto0.2_5m)+
+  ((tB_facadevol*(composition["0.2to0.5","tB"]/100))/in_buildstone0.2to0.5_5m)+
+  ((tB_facadevol*(composition["over0.5","tB"]/100))/in_buildstoneover0.5_5m))*wallheight_5m
+tB_assemblyfill_5m <- tB_volrubble*wallheight_5m/in_buildrubbleearth
+tB_assemplytotal_5m <- tB_assemblyouter_5m+tB_assemblyfill_5m
+
+## Supervision
+### Type-A
+tA_sup_5m <- in_supervision*(tA_materialtotal_5m+tA_leveling_5m+tA_assemplytotal_5m)
+### Type-B
+tB_sup_5m <- in_supervision*(tB_materialtotal_5m+tB_leveling_5m+tB_assemplytotal_5m)
+
+## Total
+### Type-A
+tA_total_5m <- tA_materialtotal_5m+tA_leveling_5m+tA_assemplytotal_5m+tA_sup_5m
+### Type-B
+tB_total_5m <- tB_materialtotal_5m+tB_leveling_5m+tB_assemplytotal_5m+tB_sup_5m
+
+
+# Energetic matrix
+estimates <- matrix(1:32, nrow = 8, ncol = 4)
+estimates <- rbind(c(tA_materialstone_3m,tB_materialstone_3m,tA_materialstone_5m,tB_materialstone_5m),
+                 c(tA_materialrubble_3m,tB_materialrubble_3m,tA_materialrubble_5m,tB_materialrubble_5m),
+                 c(tA_leveling_3m,tB_leveling_3m,tA_leveling_5m,tB_leveling_5m),
+                 c(tA_assemblyouter_3m,tB_assemblyouter_3m,tA_assemblyouter_5m,tB_assemblyouter_5m),
+                 c(tA_assemblyinner_3m,0,tA_assemblyinner_5m,0),
+                 c(tA_assemblyfill_3m,tB_assemblyfill_3m,tA_assemblyfill_5m,tB_assemblyfill_5m),
+                 c(tA_sup_3m,tB_sup_3m,tA_sup_5m,tB_sup_5m),
+                 c(tA_total_3m,tB_total_3m,tA_total_5m,tB_total_5m))
+rownames(estimates) <- c("Stone quarry (ph/m)","Rubble quarry (ph/m)","Leveling (ph/m)","Assembly outer façade (ph/m)","Assembly inner façade (ph/m)","Assembly fill (ph/m)","Supervision (ph/m)","Total wall construction (ph/m)")
+colnames(estimates) <- c("Type-A (3 m)","Type-B  (3 m)","Type-A  (5 m)","Type-B  (5 m)")
+kable(estimates, digits = 0) %>%
+  kable_styling(bootstrap_options = c("condensed"),
+                full_width = T,
+                position = "left")
+```
+
+```{r}
+#| label: tbl-results
+#| tbl-cap: Total costs estimated for the different sites analysed expressed in person-hour and in days, the latter considering a hypothetical workforce of 100 people working 8 h a day. Values provided for walls 3 and 5 m tall.
+
+# Total by site in ph
+lenght_K35 <- 1109
+lenght_K73 <- 6075
+lenght_K105 <- 2194
+lenght_K110 <- 2528
+
+# Total by site in days
+workingday <- 8
+workforce <- 100
+
+results <- matrix(1:16, nrow = 4, ncol = 4)
+results <- rbind(c(tA_total_3m*lenght_K35, tA_total_5m*lenght_K35, tA_total_3m*lenght_K35/workforce/workingday, tA_total_5m*lenght_K35/workforce/workingday),
+                 c(tB_total_3m*lenght_K73, tB_total_5m*lenght_K73, tB_total_3m*lenght_K73/workforce/workingday, tB_total_5m*lenght_K73/workforce/workingday),
+                 c(tA_total_3m*lenght_K105, tA_total_5m*lenght_K105, tA_total_3m*lenght_K105/workforce/workingday, tA_total_5m*lenght_K105/workforce/workingday),
+                 c(tA_total_3m*lenght_K110, tA_total_5m*lenght_K110, tA_total_3m*lenght_K110/workforce/workingday, tA_total_5m*lenght_K110/workforce/workingday))
+rownames(results) <- c("K35 (Type-A)","K73 (Type-B)","K105 (Type-A)","K110 (Type-A)")
+colnames(results) <- c("ph (3 m)", "ph (5 m)", "days (3 m)", "days (5 m)")
+kable(results, digits = 0) %>%
+  kable_styling(bootstrap_options = c("condensed"),
+                full_width = T,
+                position = "left")
+```
+
+# Conclusion
+
+This study has developed a new method for modelling labour costs of polygonal masonry, using the example of four Samnite hilltop sites in Italy. Starting from digital recording techniques, we formally quantified aspects of polygonal walls that reflect distinguishing characteristics of their masonry style. This was possible even for sites with a poor state of preservation showing the flexibility of the method developed. The ability to categorise walls mathematically based upon rectangularity index, gap area, and façade area represents a major improvement on the qualitative typology elaborated by Lugli (1957). A site-to-site comparison of four hillforts based on our calculations shows that the distribution of these aspects is statistically relevant, making the approach useful for characterising individual examples of polygonal masonry. Further application of these methods will improve our understanding of the spatiotemporal variation and development of polygonal masonry in Italy and beyond.
+
+Using the methods developed here, we created an energetics model taking into account each site’s characteristics. Digital documentation and statistical characterisation supported volumetric reconstructions adapted to different styles of polygonal masonry and guided selection of appropriate comparative data. Results provide a linear cost for generalised structures of both Type A and B hillforts in Samnium. We note the impact on production times implied by a change in wall-height. As observed, Samnite hillforts appear lower than contemporary urban fortifications. Nonetheless, in cases where walls reached 5 m, something only exhibited in exceptional cases, costs were significantly amplified. As we see, the change of height from 3 to 5 m implies an almost twofold increase of costs, as greater energy is required to assemble taller structures. Another major factor was fortification-type. Expectedly, two-curtain Type A walls show 35% higher linear costs than one-curtain Type B walls, 161 to 121 ph/m. Applying these linear rates provides a sense of the overall labor required to build our four hillfort sites. Results distribute according to each site’s scale but raise interesting questions when returning to functions assigned by the literature to each hillfort. Substantial investment of labor was required to make the large, complex fortifications of Monte Cila (K73), of which two-fifth of the enclosed area is very steep and unlikely to have hosted inhabitation or agriculture, while the whole site shows very few traces of settlement. For the fortifications of Monte Saraceno di Cercemaggiore (K110) or Monte Santa Croce di Piana di Monte Verna (K105), preliminary archaeological data suggest possible permanent or semi-permanent occupation at least in part of the enclosed area. However, these sites were comparatively less costly, totalling around less than half of the overall investment of Monte Cila. The small, narrow circuit of Montefalcone (K35) does not seem appropriate for substantial occupation. The labor investment required remains notable, representing perhaps half year's labor for a team of 100 workers. This investment may speak to purposes beyond supporting local pastoral activities in the region. The site’s dominant view of the Adriatic Sea together with its steep position above main routes suggests the importance of visibility. The energy investment required by its creation may thus reflect an attempt to display power on the part of its builder.
+
+Our results may now be expanded to broader study of Samnite architecture within the framework of the ongoing AHS in combination with novel field data and quantitative approaches (Fontana 2022). The approach here also intends to support cross-cultural or cross-temporal comparison with the labor costs of similar masonry structures in the Mediterranean and beyond. Our study hopes to provide a first step in the inclusion of Samnite sites, and other non-Roman or non-urban sites of polygonal masonry, into wider assessments of architecture’s historical impacts in the ancient world.
+
+**Acknowledgments:** We would like to thank the International Doctoral Cluster in Mediterranean archaeology of the University of Toronto for funding Giacomo Fontana’s research stay, which facilitated this work. We are also very grateful to Andrew Bevan and Simon Barker for their comments on the early draft of this paper. Finally, we thank the reviewers for their helpful comments.
+
+**Funding:** This work was supported by the International Doctoral Cluster in Mediterranean archaeology of the University of Toronto, by the UK Arts and Humanities Research Council [grant number 2239341], and by the Royal Netherlands Institute in Rome.
+
+**Author contributions:** Conceptualization (GF); Data curation (GF); Formal analysis (GF); Methodology (GF, SB); Writing - original draft (GF); Writing - review & editing (GF, SB).
+
+**References**
+
+Abrams, E.M. 1989: Economic Specialization and Construction Personnel in Classic Period Copan, Honduras. Amer. Ant. 52.3: 485–499.
+
+Abrams, E.M. 1994: How the Maya Built Their World: Energetics and Ancient Architecture. University of Texas Press: Austin, TX. 
+
+Abrams, E.M. and Bolland, T.W. 1999: Architectural Energetics, Ancient Monuments, and Operations Management. Journ. of Arch. Method and Theory 6.4: 263–291.
+
+Attenni, L., Baldassarre, D. 2012: Quarto Seminario internazionale di studi sulle mura poligonali: Palazzo Conti Gentili, [Alatri], 7-10 Ottobre 2009. Rome: Aracna.
+
+Attenni, L. 2015: Studi sulle mura poligonali. Alatri: atti del quinto seminario, 30-31 ottobre 2010. Napoli: Valtrend.
+
+Attenni, L. 2019: Le mura poligonali: atti del sesto seminario con una sezione sul Museo civico di Alatri. Napoli: Valtrend.
+
+Barker, S.J., Snyder, J.R., Ward, C.A.  2022. “Reflections on Energetics Studies and Roman Architecture,” in D. Maschek and M. Trümper, eds. Architecture and the Ancient Economy, Analysis Archeologica, Monograph Series. Rome: Quasar, 59-110.
+
+Benvenuti, V. 2002. The Introduction of Artillery in the Roman World: Hypothesis for a Chronological Definition Based on the Cosa Town Wall. Memoirs of the American Academy in Rome 47: 199-207.
+
+Bernard, S. 2018: Building Mid-Republican Rome: Labor, Architecture, and the Urban Economy. New York: Oxford University Press.
+
+Bernard, S. 2022: Food, Energy, and Architectural Production, in D. Maschek and M. Trümper, eds.  Architecture and the Ancient Economy, Analysis Archeologica, Monograph Series. Rome: Quasar, 35-58.
+
+Bessac, J.-C. 2007. Le travail de la pierre à Pétra: technique et économie de la taille rupestre.  Paris: Editions Recherche sur les civilisations.
+
+Boswinkel, Y. 2021: Labouring with large stones. A study into the investment and impact of construction projects on Mycenaean communities in Late Bronze Age Greece. PhD Dissertation, University of Leiden.
+
+Bradley et al. 2014; Iuvanum Survey Project : report and results. Quaderni di Archeologia d’Abruzzo 3: 11-30.
+
+Brogiolo, G.P. Camporeale, S. Chavarría Arnau, A. eds. 2017: Archeologia dell’Architettura, XXII, 2017 – Costi, tempi e metri cubi. Quantificare in architettura. Giornata di Studi (Padova, 28 ottobre 2016). Archeologia dell’Architettura 22. Siena: Insegna del Giglio.
+
+Brown, F.E. 1951: Cosa I: History and Topography. Ann Arbor: Michigan University Press.
+
+Brysbaert, A.N. 2015. Set in Stone? Constructed symbolism viewed through an architectural energetics ’ lens at Bronze Age Tiryns , Greece. Analecta Praehistorica Leidensia 45: 91–105.
+
+Brysbaert, A.N., Klinkenberg, V., Gutiérrez Garcia-M., A. and Vikatou, I. eds. 2018. Constructing monuments, perceiving monumentality and the economics of building: Theoretical and methodological approaches to the built environment. Leiden: Sidestone Press.
+
+Caiazza, D. 1998. Per un censimento dei centri fortificati in opera poligonale: proposta di una scheda di rilevamento. Atti del 1º Seminario nazionale di studi Mura poligonali, Alatri.
+
+Cambi, F., Di Paola, G., Pagliantini, L. 2013. Populonia e la romanizzazione dell’Etruria settontrionale. Scienze di Antichità 19.2/3: 387-410.
+
+Cifarelli, F.M. 2008: Un complesso termale con mosaici a Segni e l’opera vittata nel ‘Lazio del calcare’“, Orizzonti 9: 27-46.
+
+Cifani, G. 2008: Architettura romana arcaica: Edilizia e societa tra monarchia e repubblica. Rome: Quasar.
+
+Colonna, G. 2012; Ancora su Pallanum, il suo territorio e le antiche vie tra Sangro e Sinello. Quaderni di Archeologia d’Abruzzo 2, 175-202
+
+Courault, C. and Marquez, C. eds. 2020. Quantitative Studies and production cost of roman public construction. Córdoba: UCOPress.
+
+De Gennaro, R. 2005. I circuiti murari della Lucania antica (IV-III sec. a. C.). Paestum: Fondazione Paestum.
+
+De Haan, H.J. 2010. The Large Egyptian Pyramids: Modelling a Complex Engineering Project. Archeopress: Oxford. 
+
+DeLaine, J. 1997. The Baths of Caracalla: A study in the design, construction, and economics of large-scale building projects in imperial Rome. Journal of Roman Archaeology Supplement Series: Portsmouth, RI.
+
+De Rossi, G.M. 2009: Il cantiere e la tecnica, in A. Nicosia, M.C. Bettini, eds. Le mura megalitiche. Il Lazio meridionale tra storia e mito, Rome: 55-73.
+
+Devolder, M. 2013: Construire en Crète minoenne: une approche énergétique de l’architecture néopalatiale. Leuven: Peeters.
+
+De Benedittis, G. 1988. Monte Vairano. La casa di ”LN”. Catalogo della mostra. Soprintendenza ai B.A.A.A.S. del Molise: Campobasso.
+
+De Benedittis, G. 2017. Monte Vairano. Distruzione Oblio Rinascita. Cosmo Iannone Editore: Campobasso.
+
+De Benedittis and Ricci C. 2007. La fortificazione sannitica Forli del Sannio - Castel Canonico. Forli del Sannio: Comune di Forli del Sannio
+
+Fontana, G. 2022: Italy’s hidden hillforts: A large-scale Lidar-based mapping of Samnium, Journ. Field Arch. DOI: 10.1080/00934690.2022.2031465.
+
+Frederiksen, R. 2011. Greek City walls of the Archaic Period, 900-480 BC. Oxford.
+
+Gatti, S. and Palombi, D. 2016. Le città del Lazio con mura poligonali: questioni di cronologia e urbanistica, in P. Fontaine and S. Helas, eds. Le fortificazioni arcaiche del Latium vetus e dell’Etruria meridionale (IX-VI sec. a.C.) : stratigrafia, cronologia e urbanizzazione : atti delle Giornate di Studio, Roma, Academia Belgica, 19-20 settembre 2013. Brussels: Belgian Historical Institute, 233-49.
+
+Gianecchini, M. and Moggi-Cecchi, J. 2008: Stature in Archaeological Samples from Central Italy: Methodological Issues and Diachronic Changes. Amer. Journ. Physical Anthrop. 135: 284-292.
+
+Harper, C. R. 2016. Laboring with the Economics of Mycenaean Architecture: Theories, Methods, and Explorations of Mycenaean Architectural Production. PhD Dissertation, Florida State University.
+
+Karlsson, L. 1992. Fortification Towers and Masonry Techniques in the Hegemony of Syracuse, 405-211 B.C. Lund: Svenska Institutet i Rom.
+
+Lugli, G. 1957. La tecnica edilizia romana, con particolare riguardo a Roma e Lazio. Rome: Scienze e Lettere.
+
+Maschek, D. 2016: Quantifying Monumentality in a Time of Crisis. Building Materials, Labor Force and Building Costs in Late Republican Central Italy, in J. DeLaine, S. Camporeale, A. Pizzo, eds. Arqueologia de la construcción V. Man-made Materials, Engineering and Infrastructure. Proceedings of the 5th International Workshop on the Archaeology of Roman Construction, Oxford, April 11-12, 2015. Madrid: 317-30.
+
+Mayes, C. 1859. The Victorian Contractors’ and Builders’ Price‐Book, containing a universal and permanent price list for labor only, and the Melbourne prices of materials, for 1859, in all branches of the building trade. Melbourne: Sands & McDougall.
+
+McCurdy, L. and E.M. Abrams, eds. 2019: Architectural Energetcis in Archaeology. Analytical Expansions on Global Explorations. London: Routledge.
+
+Murakami, T. 2015: Replicative construction experiments at Teotihuacan, Mexico: Assessing the duration and timing of monumental construction. Journ. Field Arch. 40.3: 263-282.  
+
+Nicosia, F. and Bettini, M.C. 2009: Le mura megalitiche: il Lazio meridionale tra storia e mito. Rome: Gangemi.
+
+Oakley, S.P. 1995: The Hill-Forts of the Samnites. London: British School at Rome. 
+
+Pakkanen, J. 2013: ‘The Economics of Shipshed Complexes: Zea, a Case Study’, in D. Blackman, B. Rankov, K. Baika, H. Gerding, J. Pakkanen, Shipsheds of the Ancient Mediterranean, Cambridge: Cambridge University Press 2013, 55–75.
+
+Pakkanen, J., Brysbaert, A., Turner, D., Boswinkel, Y. 2020. Efficient three-dimensional field documentation methods for labour cost studies: Case studies from archaeological and heritage contexts. Digital Applications in Archaeology and Cultural Heritage 17, e00141.
+
+Pegoretti, G. 1863. Manuale pratico per l’estimazione dei lavori architettonici, stradali, idraulici e di fortificazione per use degli ingegneri ed architetti. Second edition rev. by A. Cantalupi. 2 vols. Milan: Domenico Salvi.
+
+Pickett, J., Schreck, J.S., Holod, R., Rassamakin, Y., Halenko, O., Woodfin, W. 2016: Architectural energetics for tumuli construction: The case of the medieval Chungul Kurgan on the Eurasian steppe, Journ. Arch. Sci. 75: 101-14.
+
+Renda, G. 2017. Il centro fortificato di Monte Pugliano e le nuove ricerche sull’altura, Atlante tematico di topografia antica 27: 125-41.
+
+Renda, G. 2018. Novità dal centro fortificato di Monte Santa Croce, Archivio storico del Caiatino 19-42.
+
+Richardson, S. 2015: Building Larsa: Labor-Value, Scale and Scope of Economy in Ancient Mesopotamia, in P. Steinkeller and C. Wunsch, eds. Labor in the Pre-Classical Old World. Dresden: ISLET, 237-328.
+
+Scopacasa, R. 2015: Ancient Samnium: Settlement, Culture, and Identity between History and Archaeology. Cambridge: Cambridge University Press.
+
+Scranton, R. 1941. Greek Walls. Cambridge, MA: Harvard.
+
+Stek, T.D. 2018: Exploring Non-Urban Society in the Mediterranean: Hill-Forts, Villages and Sanctuary Sites in Ancient Samnium, Italy. Antiquity 92.364: 1–7.
+
+Tagliamonte, G. 1996: I Sanniti: caudini, irpini, pentri, carricini, frentani. Milan: Longanesi.
+
+Turner, D.R. 2018: Comparative labour rates in cross‐cultural contexts, in A.N. Brysbaert, M.V. Klinkenberg, A.G. Garcia‐M., and I. Vikatou, eds., 195–217.
+
